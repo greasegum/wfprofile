@@ -1,0 +1,341 @@
+# Refactoring Path Generation: Migrating from Paper.js to jscad2d
+
+## Overview
+
+This document outlines our strategy for migrating the path generation logic in our project from **paper.js** to **jscad2d**. The goal is to leverage jscad2d’s advanced computational geometry capabilities to improve our path generation, manipulation, and export workflows.
+
+---
+
+## 1. Motivation
+
+- **Enhanced Geometry Operations:** jscad2d offers robust boolean and parametric modeling features.
+- **Better Export Support:** Improved support for manufacturing formats (SVG, DXF).
+- **Programmatic Modeling:** Easier to define complex, parametric paths via code.
+
+---
+
+## 2. Analysis of Current Implementation
+
+- **Audit paper.js Usage:**  
+  - Identify all modules and components using paper.js for path creation, manipulation, and rendering.
+  - Document the specific features and APIs in use (e.g., Path, CompoundPath, boolean ops, transformations).
+
+---
+
+## 3. Mapping Features
+
+| Feature/Operation         | paper.js Equivalent      | jscad2d Equivalent         |
+|--------------------------|-------------------------|---------------------------|
+| Path Creation            | `new Path()`            | `geom2.fromPoints()`      |
+| Boolean Operations       | `unite()`, `intersect()`| `geom2.union()`, etc.     |
+| Transformations          | `rotate()`, `scale()`   | `transform()`, `scale()`  |
+| Export to SVG/DXF        | `project.exportSVG()`   | `serialize()`             |
+| Interactive Drawing      | Canvas events           | (Requires custom UI)      |
+
+---
+
+## 4. Migration Plan
+
+1. **Fork and Branch**
+   - Fork the current repository.
+   - Create a `jscad2d-refactor` branch.
+
+2. **Incremental Refactor**
+   - Replace paper.js imports/usages with jscad2d equivalents.
+   - Refactor path creation and manipulation logic.
+   - Update export functions to use jscad2d’s exporters.
+
+3. **UI Adjustments**
+   - If interactive drawing is required, implement custom UI or integrate with another rendering library.
+
+4. **Testing**
+   - Compare outputs between old and new implementations.
+   - Update/add unit tests for geometry logic.
+
+5. **Documentation**
+   - Update code comments and user documentation to reflect the new workflow.
+
+---
+
+## 5. Risks and Considerations
+
+- **UI/Rendering:** jscad2d does not provide interactive canvas rendering; additional work may be needed for UI features.
+- **Learning Curve:** Team may need to familiarize themselves with jscad2d’s API and modeling paradigms.
+- **Feature Gaps:** Some paper.js features may not have direct equivalents.
+
+---
+
+## 6. Next Steps
+
+- Complete the audit of current paper.js usage.
+- Prototype a simple path generation workflow using jscad2d.
+- Review and iterate on the migration plan based on findings.
+
+---
+
+## 7. Paper.js Usage Audit Results
+
+### Overview of Paper.js Integration
+
+- **Number of Files Using Paper.js:** At least 2 confirmed (BeamGeometry.js, BeamDraw.js)
+- **Primary Usage Areas:** Path creation, rendering, layer management, and UI interaction
+- **Complexity Level:** High (extensive use of Paper.js-specific features)
+
+### Detailed Findings
+
+#### Core Modules Using Paper.js
+
+| Module/File | Purpose | Paper.js Features Used | Migration Complexity |
+|-------------|---------|------------------------|----------------------|
+| `BeamGeometry.js` | Calculating beam profile geometry | Imports paper, point calculations | Low |
+| `BeamDraw.js` | Rendering beam profiles | Path, Group, PointText, clipping masks, styling | Very High |
+| `main.js` | Application initialization | paper.setup(), paper.view, canvas management | High |
+
+#### Paper.js API Usage in BeamDraw.js
+
+| Paper.js Feature/API | Usage | jscad2d Alternative | Migration Complexity |
+|----------------------|-------------|------------------------|---------------------|
+| `new paper.Path()` | Creating beam perimeter | `geom2.fromPoints()` | Medium |
+| `path.cubicCurveTo()` | Rounded corners/fillets | Custom arc geometry | High |
+| `paper.Group` | Layer management | Custom renderer groups | High |
+| `path.clone()` | Creating clipping masks | New geometry objects | Medium |
+| `clipMask = true` | Constraining hatch to profile | (Requires custom renderer) | Very High |
+| `paper.Path.Line` | Hatch pattern lines | (Requires custom renderer) | High |
+| `paper.PointText` | Text labels and info | HTML overlay or SVG | Medium |
+| `strokeColor`, `fillColor` | Styling paths | Custom styling system | Medium |
+
+### Key Drawing Processes in BeamDraw.js
+
+1. **Profile Path Creation:**
+   ```javascript
+   // Creates path from geometry points with fillets
+   createPerimeterPath() {
+       const path = new paper.Path();
+       // ...Add points and create fillets with Bezier curves
+       path.closed = true;
+       path.strokeColor = this.config.beam.strokeColor;
+       path.fillColor = this.config.beam.fillColor;
+   }
+   ```
+
+2. **Hatch Pattern Generation:**
+   ```javascript
+   // Creates hatch lines and clips them to profile
+   createHatchPattern(perimeter) {
+       const hatchGroup = new paper.Group({ clipped: true });
+       // ...Generate angled lines across profile
+       // Create clipMask from profile
+       const clipMask = perimeter.clone();
+       clipMask.clipMask = true;
+       hatchGroup.addChild(clipMask);
+   }
+   ```
+
+3. **Layer Management:**
+   ```javascript
+   // Organizes content into layers
+   this.layers.hatch = new paper.Group();
+   this.layers.profile = new paper.Group();
+   // ...Layer visibility management
+   ```
+
+### Critical Migration Challenges
+
+1. **Clipping Masks** - jscad2d doesn't have built-in clipping mask functionality; this would need custom rendering
+2. **Bezier Curves for Fillets** - jscad2d handles curves differently; fillet calculations would need adapting
+3. **Layer Management** - jscad2d has no concept of layers; would require custom architecture
+4. **Rendering Pipeline** - jscad2d is not a rendering library; needs integration with rendering system
+
+## 9. Detailed Migration Strategy
+
+Based on the audit of BeamDraw.js, we should implement the following approach:
+
+1. **Two-tier Architecture:**
+   - **Tier 1: Geometry Engine (jscad2d)** - Handle all geometry calculations, boolean operations, etc.
+   - **Tier 2: Rendering Layer** - Custom renderer using Canvas API or SVG to visualize the jscad2d geometry
+
+2. **Implementation Steps:**
+
+   a. **Core Geometry Migration:**
+      - Convert beam profile calculation to use jscad2d
+      - Implement fillet handling with jscad2d primitives
+      - Create jscad2d boolean operations for profile
+
+   b. **Rendering Bridge:**
+      - Create a rendering adapter that converts jscad2d geometry to canvas/SVG
+      - Implement custom layer management system
+      - Build custom clipping for hatch patterns
+
+   c. **UI Integration:**
+      - Adapt event handlers to work with new geometry objects
+      - Update visualization for scale, labels, etc.
+
+3. **Proof of Concept:**
+   - Create a minimal example that generates a beam profile with jscad2d and renders it
+   - Test hatch pattern clipping with custom renderer
+
+---
+
+## 10. Native jscad2d Functions vs. Current Custom Implementations
+
+| Current Custom Implementation | Native jscad2d Alternative | Advantage |
+|------------------------------|----------------------------|-----------|
+| **Profile Creation** | | |
+| Manual path point addition with `path.add()` and `path.cubicCurveTo()` | `geom2.fromPoints()` with `arc.segments()` for fillets | More precise geometry, better parameterization |
+| **Boolean Operations** | | |
+| Limited usage of paper.js boolean ops | `geom2.union()`, `geom2.subtract()`, `geom2.intersect()` | More robust boolean operations with fewer edge cases |
+| **Transformations** | | |
+| Manual scale calculations | `transforms.scale()`, `transforms.rotate()` | Matrix-based transformations with better precision |
+| **Measurements** | | |
+| Custom bounds calculations | `measurements.bounds()`, `measurements.area()` | Accurate computational geometry methods |
+| **Hatch Pattern** | | |
+| Custom line generation with clipping | `path2.line()` + `geom2.intersect()` | Mathematical intersection instead of visual clipping |
+| **Fillets** | | |
+| Complex Bezier curve calculations | Built-in fillet functions or `path2.arc()` | Simpler, more precise arc generation |
+| **Export** | | |
+| Manual SVG construction | `io.svg.serialize()` | Standards-compliant export with options |
+
+### Additional Native Features We Can Leverage
+
+1. **Built-in Offset Operations**
+   - jscad2d's `offset()` functions for creating parallel paths (useful for construction lines)
+   - More precise than manual offset calculations
+
+2. **Hull Calculations**
+   - `hull()` function for creating convex hulls around geometries
+   - Useful for bounding operations
+
+3. **Tesselation**
+   - Built-in functions for tesselating complex geometries
+   - Useful for more complex rendering or analysis
+
+4. **Shape Libraries**
+   - Standard shape generation (rectangles, circles, polygons)
+   - Reduces need for custom shape builders
+
+5. **Curve Approximation**
+   - Better handling of curved segments with mathematical precision
+   - Useful for more accurate fillets and arcs
+
+This replacement of custom implementations with native functions should result in:
+- More robust geometry operations
+- Better performance
+- Fewer edge cases and bugs
+- More maintainable code
+
+---
+
+## 11. Advantages for Dimensions and Callouts
+
+### Improved Dimension Generation with jscad2d
+
+| Advantage | Description | Impact |
+|-----------|-------------|--------|
+| **Geometric Precision** | Dimensions calculated from actual geometry, not visual representations | More accurate measurements, especially for complex shapes |
+| **Model-Linked Dimensions** | Dimensions can be linked directly to geometry objects | Automatic updates when geometry changes |
+| **Parametric Relationship** | Dimensions maintain relationship to the underlying model | More robust dimension placement |
+| **Measurement Functions** | Built-in functions for distances, areas, and angles | Replace custom measurement calculations |
+| **Clean Dimension Logic** | Separate geometry from presentation | More maintainable code |
+
+### Implementation Benefits
+
+1. **True CAD-style Dimensions**
+   - Dimensions based on geometric entities rather than screen coordinates
+   - Accurate representation of actual model measurements
+
+2. **Simplified Code**
+   - Replace complex manual calculations with built-in geometric functions:
+   ```javascript
+   // Current approach (paper.js)
+   const dx = end.x - start.x;
+   const dy = end.y - start.y;
+   const length = Math.sqrt(dx * dx + dy * dy);
+   
+   // jscad2d approach
+   const length = measurements.distance(start, end);
+   ```
+
+3. **Better Fillet Dimensioning**
+   - Accurate radius and center-point calculations for fillets
+   - Improved arc dimensioning capabilities
+
+4. **Export with Dimensions**
+   - More control over dimension appearance in exported files
+   - Better CAD standard compliance
+
+### Migration Approach for Dimensions
+
+1. Create a new `JscadDimension` class that leverages jscad2d's measurement functions
+2. Implement a rendering adapter to display these dimensions on screen
+3. Progressively replace paper.js dimension methods with jscad2d-based alternatives
+
+---
+
+## 12. Hybrid Implementation: jscad2d + paper.js
+
+### Architecture Overview
+
+```
+┌─────────────────┐     ┌───────────────┐     ┌─────────────────┐
+│                 │     │               │     │                 │
+│  jscad2d        │────▶│  Adapter      │────▶│  paper.js       │
+│  (Geometry)     │     │  Layer        │     │  (Rendering)    │
+│                 │     │               │     │                 │
+└─────────────────┘     └───────────────┘     └─────────────────┘
+```
+
+### Benefits of Hybrid Approach
+
+1. **Incremental Migration**
+   - Gradually replace geometry generation while keeping rendering intact
+   - Lower risk than a complete rewrite
+   - Can migrate component by component
+
+2. **Leverage Existing UI Code**
+   - Keep layer management system
+   - Maintain dimension display code
+   - Preserve current user interface
+
+3. **Clean Separation of Concerns**
+   - jscad2d: Pure geometry modeling
+   - paper.js: Pure visualization and UI
+
+### Implementation Strategy
+
+1. **Create an Adapter Layer**
+   - Convert jscad2d geometry objects to paper.js paths
+   - Example:
+   ```javascript
+   function jscadToPaperPath(geom) {
+     // Create a paper.js path from jscad2d geometry
+     const paperPath = new paper.Path();
+     
+     // Get points from jscad2d geometry
+     const points = geom2.toPoints(geom);
+     
+     // Add points to paper.js path
+     points.forEach(point => {
+       paperPath.add(new paper.Point(point[0], point[1]));
+     });
+     
+     paperPath.closed = true;
+     return paperPath;
+   }
+   ```
+
+2. **Refactor Component by Component**
+   - Start with the BeamGeometry class
+   - Move to path creation, then boolean operations
+
+3. **Preserve Layer/UI Structure**
+   - Keep the existing layer structure in paper.js
+   - Only replace the underlying geometry generation
+
+### Migration Phases
+
+| Phase | Focus | Components |
+|-------|-------|------------|
+| 1 | Core Geometry | BeamGeometry → jscad2d |
+| 2 | Path Generation | Create adapter for paper.js rendering |
+| 3 | Advanced Features | Fillets, boolean operations |
+| 4 | Dimensions | Update to use jscad2d measurements |
