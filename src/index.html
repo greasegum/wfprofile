@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beam Sketch</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.17/paper-full.min.js"></script>
+    <link rel="stylesheet" href="styles/styles.css">
+    <link rel="stylesheet" href="styles/controls.css">
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="controls-container">
+        <div class="theme-toggle">
+            <h3>Theme</h3>
+            <label class="switch">
+                <input type="checkbox" id="theme-toggle">
+                <span class="slider">
+                    <span class="icon light">☀️</span>
+                    <span class="icon dark">🌙</span>
+                </span>
+            </label>
+        </div>
+        <div class="profile-selector">
+            <h3>Beam Profile</h3>
+            <select id="profile-select">
+                <option value="W8x31">W8x31</option>
+                <option value="W10x33">W10x33</option>
+                <option value="W12x40">W12x40</option>
+                <option value="W14x48">W14x48</option>
+                <option value="W16x57">W16x57</option>
+                <option value="W18x76">W18x76</option>
+                <option value="W21x93">W21x93</option>
+                <option value="W24x104">W24x104</option>
+            </select>
+        </div>
+        <div class="profile-info">
+            <h3>Profile Properties</h3>
+            <div class="property-group">
+                <button class="group-header" aria-expanded="true">
+                    <h4>Dimensions</h4>
+                    <span class="toggle-icon">▼</span>
+                </button>
+                <div class="group-content">
+                    <table>
+                        <tr>
+                            <th>Designation</th>
+                            <td id="profile-designation">-</td>
+                        </tr>
+                        <tr>
+                            <th>Height (d)</th>
+                            <td id="profile-height">-</td>
+                        </tr>
+                        <tr>
+                            <th>Width (bf)</th>
+                            <td id="profile-width">-</td>
+                        </tr>
+                        <tr>
+                            <th>Web Thickness (tw)</th>
+                            <td id="profile-web">-</td>
+                        </tr>
+                        <tr>
+                            <th>Flange Thickness (tf)</th>
+                            <td id="profile-flange">-</td>
+                        </tr>
+                        <tr>
+                            <th>Fillet Radius (r)</th>
+                            <td id="profile-fillet">-</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <div class="property-group">
+                <button class="group-header" aria-expanded="true">
+                    <h4>Physical Properties</h4>
+                    <span class="toggle-icon">▼</span>
+                </button>
+                <div class="group-content">
+                    <table>
+                        <tr>
+                            <th>Weight per foot</th>
+                            <td id="profile-weight">-</td>
+                        </tr>
+                        <tr>
+                            <th>Area (A)</th>
+                            <td id="profile-area">-</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <div class="property-group">
+                <button class="group-header" aria-expanded="true">
+                    <h4>Strong Axis Properties</h4>
+                    <span class="toggle-icon">▼</span>
+                </button>
+                <div class="group-content">
+                    <table>
+                        <tr>
+                            <th>Moment of Inertia (Ix)</th>
+                            <td id="profile-ix">-</td>
+                        </tr>
+                        <tr>
+                            <th>Section Modulus (Sx)</th>
+                            <td id="profile-sx">-</td>
+                        </tr>
+                        <tr>
+                            <th>Radius of Gyration (rx)</th>
+                            <td id="profile-rx">-</td>
+                        </tr>
+                        <tr>
+                            <th>Plastic Section Modulus (Zx)</th>
+                            <td id="profile-zx">-</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <div class="property-group">
+                <button class="group-header" aria-expanded="true">
+                    <h4>Weak Axis Properties</h4>
+                    <span class="toggle-icon">▼</span>
+                </button>
+                <div class="group-content">
+                    <table>
+                        <tr>
+                            <th>Moment of Inertia (Iy)</th>
+                            <td id="profile-iy">-</td>
+                        </tr>
+                        <tr>
+                            <th>Section Modulus (Sy)</th>
+                            <td id="profile-sy">-</td>
+                        </tr>
+                        <tr>
+                            <th>Radius of Gyration (ry)</th>
+                            <td id="profile-ry">-</td>
+                        </tr>
+                        <tr>
+                            <th>Plastic Section Modulus (Zy)</th>
+                            <td id="profile-zy">-</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <div class="property-group">
+                <button class="group-header" aria-expanded="true">
+                    <h4>Additional Properties</h4>
+                    <span class="toggle-icon">▼</span>
+                </button>
+                <div class="group-content">
+                    <table>
+                        <tr>
+                            <th>Torsional Constant (J)</th>
+                            <td id="profile-j">-</td>
+                        </tr>
+                        <tr>
+                            <th>Warping Constant (Cw)</th>
+                            <td id="profile-cw">-</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="layer-controls">
+            <h3>Layer Visibility</h3>
+            <div class="layer-control">
+                <input type="checkbox" id="profile-layer" checked>
+                <label for="profile-layer">Beam Profile</label>
+            </div>
+            <div class="layer-control">
+                <input type="checkbox" id="hatch-layer" checked>
+                <label for="hatch-layer">Hatch Pattern</label>
+            </div>
+            <div class="layer-control">
+                <input type="checkbox" id="dimension-layer" checked>
+                <label for="dimension-layer">Dimensions</label>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="main.js"></script>
+</body>
+</html> 

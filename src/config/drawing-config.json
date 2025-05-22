@@ -1,0 +1,46 @@
+{
+    "themes": {
+        "light": {
+            "beam": {
+                "fillColor": null,
+                "strokeColor": "#000000",
+                "strokeWidth": 2
+            },
+            "hatch": {
+                "spacing": 5,
+                "color": "#2c5777",
+                "strokeWidth": 1,
+                "angle": 45
+            },
+            "dimensions": {
+                "color": "#333333",
+                "fontSize": 12,
+                "arrowSize": 8,
+                "extensionOffset": 10,
+                "textOffset": 5
+            },
+            "background": "#ffffff"
+        },
+        "dark": {
+            "beam": {
+                "fillColor": null,
+                "strokeColor": "#ffffff",
+                "strokeWidth": 2
+            },
+            "hatch": {
+                "spacing": 5,
+                "color": "#4fa6d7",
+                "strokeWidth": 1,
+                "angle": 45
+            },
+            "dimensions": {
+                "color": "#cccccc",
+                "fontSize": 12,
+                "arrowSize": 8,
+                "extensionOffset": 10,
+                "textOffset": 5
+            },
+            "background": "#1a1a1a"
+        }
+    }
+} 

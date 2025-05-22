@@ -1,0 +1,186 @@
+{
+    "W8x31": {
+        "dimensions": {
+            "height": 8.00,
+            "width": 8.00,
+            "webThickness": 0.285,
+            "flangeThickness": 0.435,
+            "filletRadius": 0.375
+        },
+        "properties": {
+            "weight": 31.0,
+            "area": 9.13,
+            "Ix": 110,
+            "Sx": 27.5,
+            "rx": 3.47,
+            "Zx": 31.1,
+            "Iy": 37.1,
+            "Sy": 9.27,
+            "ry": 2.02,
+            "Zy": 14.1,
+            "J": 0.536,
+            "Cw": 555
+        }
+    },
+    "W10x33": {
+        "dimensions": {
+            "height": 9.73,
+            "width": 7.96,
+            "webThickness": 0.290,
+            "flangeThickness": 0.435,
+            "filletRadius": 0.375
+        },
+        "properties": {
+            "weight": 33.0,
+            "area": 9.71,
+            "Ix": 171,
+            "Sx": 35.2,
+            "rx": 4.19,
+            "Zx": 39.8,
+            "Iy": 36.6,
+            "Sy": 9.20,
+            "ry": 1.94,
+            "Zy": 14.1,
+            "J": 0.558,
+            "Cw": 1100
+        }
+    },
+    "W12x40": {
+        "dimensions": {
+            "height": 11.94,
+            "width": 8.01,
+            "webThickness": 0.295,
+            "flangeThickness": 0.515,
+            "filletRadius": 0.500
+        },
+        "properties": {
+            "weight": 40.0,
+            "area": 11.7,
+            "Ix": 307,
+            "Sx": 51.5,
+            "rx": 5.13,
+            "Zx": 58.9,
+            "Iy": 44.1,
+            "Sy": 11.0,
+            "ry": 1.94,
+            "Zy": 17.0,
+            "J": 0.906,
+            "Cw": 2140
+        }
+    },
+    "W14x48": {
+        "dimensions": {
+            "height": 13.84,
+            "width": 8.06,
+            "webThickness": 0.340,
+            "flangeThickness": 0.595,
+            "filletRadius": 0.500
+        },
+        "properties": {
+            "weight": 48.0,
+            "area": 14.1,
+            "Ix": 484,
+            "Sx": 70.0,
+            "rx": 5.86,
+            "Zx": 80.0,
+            "Iy": 51.4,
+            "Sy": 12.8,
+            "ry": 1.91,
+            "Zy": 19.8,
+            "J": 1.51,
+            "Cw": 3540
+        }
+    },
+    "W16x57": {
+        "dimensions": {
+            "height": 16.00,
+            "width": 8.50,
+            "webThickness": 0.360,
+            "flangeThickness": 0.630,
+            "filletRadius": 0.625
+        },
+        "properties": {
+            "weight": 57.0,
+            "area": 16.8,
+            "Ix": 758,
+            "Sx": 94.7,
+            "rx": 6.72,
+            "Zx": 108,
+            "Iy": 68.3,
+            "Sy": 16.1,
+            "ry": 2.02,
+            "Zy": 24.9,
+            "J": 1.94,
+            "Cw": 6260
+        }
+    },
+    "W18x76": {
+        "dimensions": {
+            "height": 18.20,
+            "width": 11.00,
+            "webThickness": 0.425,
+            "flangeThickness": 0.680,
+            "filletRadius": 0.750
+        },
+        "properties": {
+            "weight": 76.0,
+            "area": 22.3,
+            "Ix": 1330,
+            "Sx": 146,
+            "rx": 7.73,
+            "Zx": 167,
+            "Iy": 186,
+            "Sy": 33.8,
+            "ry": 2.89,
+            "Zy": 52.1,
+            "J": 3.48,
+            "Cw": 15000
+        }
+    },
+    "W21x93": {
+        "dimensions": {
+            "height": 21.10,
+            "width": 12.50,
+            "webThickness": 0.455,
+            "flangeThickness": 0.740,
+            "filletRadius": 0.875
+        },
+        "properties": {
+            "weight": 93.0,
+            "area": 27.3,
+            "Ix": 2170,
+            "Sx": 206,
+            "rx": 8.91,
+            "Zx": 236,
+            "Iy": 308,
+            "Sy": 49.3,
+            "ry": 3.36,
+            "Zy": 75.8,
+            "J": 5.21,
+            "Cw": 29100
+        }
+    },
+    "W24x104": {
+        "dimensions": {
+            "height": 23.90,
+            "width": 12.90,
+            "webThickness": 0.500,
+            "flangeThickness": 0.750,
+            "filletRadius": 1.000
+        },
+        "properties": {
+            "weight": 104.0,
+            "area": 30.6,
+            "Ix": 3100,
+            "Sx": 259,
+            "rx": 10.1,
+            "Zx": 295,
+            "Iy": 359,
+            "Sy": 55.7,
+            "ry": 3.42,
+            "Zy": 85.5,
+            "J": 6.05,
+            "Cw": 42100
+        }
+    }
+} 

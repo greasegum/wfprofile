@@ -1,0 +1,23 @@
+{
+    "style": {
+        "fontSize": 11,
+        "fontFamily": "Arial",
+        "textColor": "#000",
+        "lineColor": "#000",
+        "lineWidth": 1,
+        "arrowSize": 6,
+        "textGap": 4,
+        "extensionOffset": 2,
+        "extensionLength": 4,
+        "minSpaceForInside": 40,
+        "backgroundColor": "#fff"
+    },
+    "offsets": {
+        "horizontal": 40,
+        "vertical": 60,
+        "thickness": {
+            "extension": 40,
+            "textOffset": 10
+        }
+    }
+} 

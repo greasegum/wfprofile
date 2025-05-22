@@ -1,0 +1,19 @@
+/* Container for the beam sketch graphics area */
+.graphics-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100vw;
+  height: 100vh;
+  background: #f5f5ef;
+}
+
+canvas {
+  display: block;
+  margin: auto;
+  background: #f5f5ef;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  border-radius: 8px;
+  max-width: 100vw;
+  max-height: 100vh;
+} 

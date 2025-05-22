@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beam Sketch</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.17/paper-full.min.js"></script>
+    <script src="scale-manager.js"></script>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <script>
+        // Initialize Paper.js
+        paper.setup('canvas');
+
+        // Create scale manager with initial scale (40px = 1 inch)
+        const scaleManager = new ScaleManager(40);
+
+        // Fillet radius (in inches)
+        const FILLET_RADIUS = 0.25;
+
+        // Define beam geometry (in inches)
+        function defineBeamGeometry() {
+            // Define dimensions in inches
+            const dimensions = {
+                width: 7.87,
+                height: 11.81,
+                webThickness: 0.79,
+                flangeThickness: 0.98
+            };
+            
+            // Calculate key points (12 unique corners) in inches
+            const xLeft = 0;
+            const xRight = dimensions.width;
+            const xWebLeft = (dimensions.width - dimensions.webThickness) / 2;
+            const xWebRight = (dimensions.width + dimensions.webThickness) / 2;
+            const yTop = 0;
+            const yFlange = dimensions.flangeThickness;
+            const yWebTop = yFlange;
+            const yWebBottom = dimensions.height - dimensions.flangeThickness;
+            const yBottom = dimensions.height;
+
+            // Create points in inches
+            const points = {
+                tf1: new paper.Point(xLeft, yTop),
+                tf2: new paper.Point(xRight, yTop),
+                tf3: new paper.Point(xRight, yFlange),
+                tf4: new paper.Point(xLeft, yFlange),
+                w1: new paper.Point(xWebLeft, yFlange),
+                w2: new paper.Point(xWebRight, yFlange),
+                w3: new paper.Point(xWebRight, yWebBottom),
+                w4: new paper.Point(xWebLeft, yWebBottom),
+                bf1: new paper.Point(xLeft, yWebBottom),
+                bf2: new paper.Point(xRight, yWebBottom),
+                bf3: new paper.Point(xRight, yBottom),
+                bf4: new paper.Point(xLeft, yBottom)
+            };
+
+            // Convert all points to pixels
+            const pixelPoints = {};
+            for (let key in points) {
+                pixelPoints[key] = scaleManager.pointToPixels(points[key]);
+            }
+            
+            return { dimensions, points: pixelPoints };
+        }
+
+        // Create beam components
+        function createBeamComponents(geometry) {
+            const { points } = geometry;
+            // Top flange
+            const topFlange = new paper.Path.Rectangle({
+                from: points.tf1,
+                to: points.tf3,
+                fillColor: '#e0e0e0'
+            });
+            // Web
+            const web = new paper.Path.Rectangle({
+                from: points.w1,
+                to: points.w3,
+                fillColor: '#e0e0e0'
+            });
+            // Bottom flange
+            const bottomFlange = new paper.Path.Rectangle({
+                from: points.bf1,
+                to: points.bf3,
+                fillColor: '#e0e0e0'
+            });
+            return { topFlange, web, bottomFlange };
+        }
+
+        // Helper to add a fillet at a corner (working in pixels)
+        function addFilletToPath(path, prev, corner, next, radius, helpers = false) {
+            const pixelRadius = scaleManager.toPixels(radius);
+            // Directions
+            const v1 = corner.subtract(prev).normalize();
+            const v2 = next.subtract(corner).normalize();
+            // Fillet start/end
+            const filletStart = corner.subtract(v1.multiply(pixelRadius));
+            const filletEnd = corner.add(v2.multiply(pixelRadius));
+            // Bezier control points
+            const k = 0.5523 * pixelRadius;
+            const cp1 = filletStart.add(v1.multiply(k));
+            const cp2 = filletEnd.subtract(v2.multiply(k));
+            // Add to path
+            path.lineTo(filletStart);
+            path.cubicCurveTo(cp1, cp2, filletEnd);
+            // Visual helpers (only if explicitly enabled)
+            if (helpers) {
+                new paper.Path.Circle({ 
+                    center: corner, 
+                    radius: scaleManager.toPixels(0.08), 
+                    strokeColor: 'red' 
+                });
+                new paper.Path.Circle({ 
+                    center: filletStart, 
+                    radius: scaleManager.toPixels(0.08), 
+                    strokeColor: 'blue' 
+                });
+                new paper.Path.Circle({ 
+                    center: filletEnd, 
+                    radius: scaleManager.toPixels(0.08), 
+                    strokeColor: 'green' 
+                });
+            }
+            return filletEnd;
+        }
+
+        function createPerimeterPath(geometry) {
+            const { points } = geometry;
+            const r = FILLET_RADIUS;
+            // Perimeter order
+            const order = [
+                'tf1', 'tf2', 'tf3', 'w2', 'w3', 'bf2', 'bf3', 'bf4', 'bf1', 'w4', 'w1', 'tf4'
+            ];
+            // Indices of corners to fillet
+            const filletCorners = {
+                3: r, // w2
+                4: r, // w3
+                9: r, // w4
+                10: r // w1
+            };
+            // Build path
+            const path = new paper.Path();
+            // Start at tf1
+            path.add(points[order[0]]);
+            for (let i = 1; i < order.length + 1; i++) {
+                const currIdx = i % order.length;
+                const prevIdx = (i - 1 + order.length) % order.length;
+                const nextIdx = (i + 1) % order.length;
+                const curr = points[order[currIdx]];
+                if (filletCorners.hasOwnProperty(currIdx)) {
+                    // Fillet at this corner
+                    addFilletToPath(
+                        path,
+                        points[order[prevIdx]],
+                        curr,
+                        points[order[nextIdx]],
+                        filletCorners[currIdx],
+                        false // Disable helper circles
+                    );
+                } else {
+                    path.lineTo(curr);
+                }
+            }
+            path.closed = true;
+            path.strokeColor = '#000000';
+            path.strokeWidth = 2;
+            path.fillColor = null;
+            return path;
+        }
+
+        // Draw the beam shape (geometry, perimeter, fillets, hatch) on the given layer
+        function drawBeamShape(targetLayer) {
+            // Define geometry
+            const geometry = defineBeamGeometry();
+            // Create perimeter
+            const perimeter = createPerimeterPath(geometry);
+
+            // --- HATCH FILL ---
+            // Create a new group for the hatch
+            const bounds = perimeter.bounds.expand(scaleManager.toPixels(0.1)); // 0.1" expansion
+            const hatchSpacing = 8; // Fixed 8px spacing for consistent density
+            const hatchColor = '#3a7ca5';
+            const hatchStrokeWidth = 1; // 1px stroke width
+            const diag = Math.sqrt(bounds.width * bounds.width + bounds.height * bounds.height);
+            const lines = [];
+            const stepCount = Math.ceil(diag / hatchSpacing);
+            
+            // Create hatch lines at 45 degrees
+            for (let i = -stepCount; i < stepCount; i++) {
+                const c = bounds.top - i * hatchSpacing;
+                const ext1 = new paper.Point(bounds.left - diag, bounds.left - diag + c);
+                const ext2 = new paper.Point(bounds.right + diag, bounds.right + diag + c);
+                const line = new paper.Path.Line({
+                    from: ext1,
+                    to: ext2,
+                    strokeColor: hatchColor,
+                    strokeWidth: hatchStrokeWidth,
+                    strokeScaling: false // Prevent stroke width from scaling
+                });
+                lines.push(line);
+            }
+            
+            const perimeterClip = perimeter.clone();
+            perimeterClip.clipMask = true;
+            const hatchGroup = new paper.Group([perimeterClip, ...lines]);
+            targetLayer.addChild(hatchGroup);
+            
+            // Draw perimeter on top
+            targetLayer.addChild(perimeter);
+            return { geometry, perimeter, hatchGroup };
+        }
+
+        // DimensionalAnnotation class for CAD-like dimensioning
+        class DimensionalAnnotation {
+            constructor({ 
+                start, 
+                end, 
+                value, 
+                orientation = null, 
+                placementHint = null, 
+                offset = 40, 
+                decimals = 3, 
+                fraction = true, 
+                style = {} 
+            }) {
+                this.start = start;
+                this.end = end;
+                this.value = value;
+                
+                // Calculate orientation if not specified
+                const dx = end.x - start.x;
+                const dy = end.y - start.y;
+                this.orientation = orientation || (Math.abs(dx) >= Math.abs(dy) ? 'horizontal' : 'vertical');
+                
+                // Default placement hint based on orientation
+                this.placementHint = placementHint || (this.orientation === 'horizontal' ? 'above' : 'left');
+                
+                this.offset = offset;
+                this.decimals = decimals;
+                this.fraction = fraction;
+                
+                // Default style matching CAD drawing
+                this.style = Object.assign({
+                    fontSize: 11, // Fixed pixel size for consistent text
+                    fontFamily: 'Arial',
+                    textColor: '#000',
+                    lineColor: '#000',
+                    lineWidth: 1, // Fixed pixel width
+                    arrowSize: 6, // Fixed pixel size
+                    textGap: 4, // Fixed pixel gap
+                    extensionOffset: 2, // Gap from geometry
+                    extensionLength: 4, // Extension past dimension line
+                    minSpaceForInside: 40, // Minimum space for text between arrows
+                    backgroundColor: '#fff' // Background for text
+                }, style);
+            }
+
+            draw(targetLayer) {
+                const group = new paper.Group();
+                
+                // Calculate direction vectors
+                const dx = this.end.x - this.start.x;
+                const dy = this.end.y - this.start.y;
+                const length = Math.sqrt(dx * dx + dy * dy);
+                
+                // Unit vector in direction of dimension
+                const dir = length > 0 
+                    ? new paper.Point(dx / length, dy / length)
+                    : new paper.Point(1, 0);
+                
+                // Calculate normal vector based on placement hint
+                let normal;
+                if (this.orientation === 'horizontal') {
+                    normal = new paper.Point(0, this.placementHint === 'below' ? 1 : -1);
+                } else {
+                    normal = new paper.Point(this.placementHint === 'left' ? -1 : 1, 0);
+                }
+                
+                // Calculate dimension line points
+                const offsetVec = normal.multiply(this.offset);
+                const dimStart = this.start.add(offsetVec);
+                const dimEnd = this.end.add(offsetVec);
+                
+                // Extension lines (perfectly vertical/horizontal)
+                const ext1Start = this.start;
+                const ext2Start = this.end;
+                let ext1End, ext2End;
+                
+                if (this.orientation === 'horizontal') {
+                    // Vertical extension lines
+                    ext1End = new paper.Point(ext1Start.x, dimStart.y);
+                    ext2End = new paper.Point(ext2Start.x, dimEnd.y);
+                } else {
+                    // Horizontal extension lines
+                    ext1End = new paper.Point(dimStart.x, ext1Start.y);
+                    ext2End = new paper.Point(dimEnd.x, ext2Start.y);
+                }
+                
+                // Draw extension lines
+                const ext1 = new paper.Path.Line({
+                    from: ext1Start,
+                    to: ext1End,
+                    strokeColor: this.style.lineColor,
+                    strokeWidth: this.style.lineWidth,
+                    strokeScaling: false
+                });
+                const ext2 = new paper.Path.Line({
+                    from: ext2Start,
+                    to: ext2End,
+                    strokeColor: this.style.lineColor,
+                    strokeWidth: this.style.lineWidth,
+                    strokeScaling: false
+                });
+                
+                // Draw dimension line
+                const dimLine = new paper.Path.Line({
+                    from: dimStart,
+                    to: dimEnd,
+                    strokeColor: this.style.lineColor,
+                    strokeWidth: this.style.lineWidth,
+                    strokeScaling: false
+                });
+                
+                // Special case for web thickness: outside arrows
+                const isWebThickness = this.value === 0.79; // Web thickness value
+                const textInside = !isWebThickness && length >= this.style.minSpaceForInside;
+                
+                // Add arrowheads
+                if (isWebThickness) {
+                    // Outside arrows for web thickness
+                    this.drawArrow(group, dimStart, dir.multiply(-1));
+                    this.drawArrow(group, dimEnd, dir);
+                } else if (textInside) {
+                    // Inside arrows
+                    this.drawArrow(group, dimStart, dir);
+                    this.drawArrow(group, dimEnd, dir.multiply(-1));
+                } else {
+                    // Outside arrows
+                    this.drawArrow(group, dimStart, dir.multiply(-1));
+                    this.drawArrow(group, dimEnd, dir);
+                }
+                
+                // Calculate text position
+                const midPoint = dimStart.add(dimEnd).divide(2);
+                const textPoint = midPoint.add(normal.multiply(this.style.textGap));
+                
+                // Format text with background
+                const text = new paper.PointText({
+                    point: textPoint,
+                    content: this.formatValue(),
+                    fillColor: this.style.textColor,
+                    fontFamily: this.style.fontFamily,
+                    fontSize: this.style.fontSize,
+                    justification: 'center'
+                });
+                
+                // Add white background rectangle for text
+                const textBounds = text.bounds.expand(4);
+                const textBackground = new paper.Path.Rectangle({
+                    rectangle: textBounds,
+                    fillColor: this.style.backgroundColor,
+                    strokeWidth: 0
+                });
+                
+                // Add all elements to group in correct order
+                group.addChildren([ext1, ext2, dimLine, textBackground, text]);
+                targetLayer.addChild(group);
+                return group;
+            }
+
+            // Format value as decimal and fraction
+            formatValue() {
+                // Format decimal inches (3 places) in brackets
+                const decimalStr = `[${this.value.toFixed(3)}"]`;
+                
+                // Convert to fraction (in 32nds)
+                const fraction = this.toFraction(this.value, 32);
+                const fractionStr = fraction.whole > 0 
+                    ? `${fraction.whole} ${fraction.num}/${fraction.den}"`
+                    : `${fraction.num}/${fraction.den}"`;
+                
+                // Return both formats
+                return `${decimalStr}\n${fractionStr}`;
+            }
+
+            // Convert decimal to fraction
+            toFraction(decimal, denominator) {
+                const whole = Math.floor(decimal);
+                const frac = decimal - whole;
+                const num = Math.round(frac * denominator);
+                
+                // Reduce fraction if possible
+                const gcd = (a, b) => b ? gcd(b, a % b) : a;
+                const div = gcd(num, denominator);
+                
+                return {
+                    whole: whole,
+                    num: num / div,
+                    den: denominator / div
+                };
+            }
+
+            // Draw an arrowhead
+            drawArrow(group, base, dir) {
+                const size = this.style.arrowSize;
+                const perp = new paper.Point(-dir.y, dir.x).normalize();
+                const tip = base.add(dir.multiply(size));
+                const left = base.add(perp.multiply(size * 0.3));
+                const right = base.subtract(perp.multiply(size * 0.3));
+                
+                const arrow = new paper.Path({
+                    segments: [left, tip, right],
+                    closed: true,
+                    fillColor: this.style.lineColor,
+                    strokeColor: null
+                });
+                
+                group.addChild(arrow);
+            }
+        }
+
+        // Specialized method for thickness dimensions
+        function drawThicknessDimension(targetLayer, {
+            leftEdge,    // Left intersection point
+            rightEdge,   // Right intersection point
+            value,       // Measurement value
+            yPosition,   // Vertical position of dimension
+            extension = 40, // How far to extend past right edge (in pixels)
+            textOffset = 10 // Distance from extension to text (in pixels)
+        }) {
+            const group = new paper.Group();
+            
+            // Create the main dimension line
+            const dimLine = new paper.Path.Line({
+                from: new paper.Point(leftEdge.x - 4, yPosition), // Small extension on left
+                to: new paper.Point(rightEdge.x + extension, yPosition),
+                strokeColor: '#000',
+                strokeWidth: 1,
+                strokeScaling: false
+            });
+            
+            // Create arrows (pointing inward)
+            function createArrow(point, direction) {
+                const size = 6; // Arrow size in pixels
+                const angle = direction === 'left' ? 0 : 180; // Point left or right
+                
+                // Create arrow path
+                const arrow = new paper.Path({
+                    segments: [
+                        point.add(new paper.Point(direction === 'left' ? size : -size, -size/2)),
+                        point,
+                        point.add(new paper.Point(direction === 'left' ? size : -size, size/2))
+                    ],
+                    closed: true,
+                    fillColor: '#000',
+                    strokeWidth: 0
+                });
+                
+                return arrow;
+            }
+            
+            // Add arrows at web edges
+            const leftArrow = createArrow(new paper.Point(leftEdge.x, yPosition), 'right');
+            const rightArrow = createArrow(new paper.Point(rightEdge.x, yPosition), 'left');
+            
+            // Format dimension text
+            function formatDimension(value) {
+                // Format decimal inches (3 places) in brackets
+                const decimalStr = `[${value.toFixed(3)}"]`;
+                
+                // Convert to fraction (in 32nds)
+                const whole = Math.floor(value);
+                const frac = value - whole;
+                const num = Math.round(frac * 32);
+                const den = 32;
+                
+                // Reduce fraction if possible
+                function gcd(a, b) { return b ? gcd(b, a % b) : a; }
+                const div = gcd(num, den);
+                
+                const fractionStr = whole > 0 
+                    ? `${whole} ${num/div}/${den/div}"`
+                    : `${num/div}/${den/div}"`;
+                
+                return `${decimalStr}\n${fractionStr}`;
+            }
+            
+            // Add dimension text
+            const text = new paper.PointText({
+                point: new paper.Point(rightEdge.x + extension + textOffset, yPosition),
+                content: formatDimension(value),
+                fillColor: '#000',
+                fontFamily: 'Arial',
+                fontSize: 11,
+                justification: 'left'
+            });
+            
+            // Center text vertically
+            text.position.y = yPosition + text.bounds.height/4;
+            
+            // Add white background for text
+            const textBackground = new paper.Path.Rectangle({
+                rectangle: text.bounds.expand(4),
+                fillColor: '#fff',
+                strokeWidth: 0
+            });
+            
+            // Add all elements to group in correct order
+            group.addChildren([dimLine, leftArrow, rightArrow, textBackground, text]);
+            targetLayer.addChild(group);
+            
+            return group;
+        }
+
+        // Specialized method for vertical thickness dimensions
+        function drawVerticalThicknessDimension(targetLayer, {
+            topEdge,     // Top intersection point
+            bottomEdge,  // Bottom intersection point
+            value,       // Measurement value
+            xPosition,   // Horizontal position of dimension
+            extension = 40, // How far to extend past bottom edge (in pixels)
+            textOffset = 10 // Distance from extension to text (in pixels)
+        }) {
+            const group = new paper.Group();
+            
+            // Create the main dimension line
+            const dimLine = new paper.Path.Line({
+                from: new paper.Point(xPosition, topEdge.y - 4), // Small extension on top
+                to: new paper.Point(xPosition, bottomEdge.y + extension),
+                strokeColor: '#000',
+                strokeWidth: 1,
+                strokeScaling: false
+            });
+            
+            // Create arrows (pointing inward)
+            function createArrow(point, direction) {
+                const size = 6; // Arrow size in pixels
+                const angle = direction === 'up' ? 90 : -90; // Point up or down
+                
+                // Create arrow path
+                const arrow = new paper.Path({
+                    segments: [
+                        point.add(new paper.Point(-size/2, direction === 'up' ? size : -size)),
+                        point,
+                        point.add(new paper.Point(size/2, direction === 'up' ? size : -size))
+                    ],
+                    closed: true,
+                    fillColor: '#000',
+                    strokeWidth: 0
+                });
+                
+                return arrow;
+            }
+            
+            // Add arrows at flange edges
+            const topArrow = createArrow(new paper.Point(xPosition, topEdge.y), 'down');
+            const bottomArrow = createArrow(new paper.Point(xPosition, bottomEdge.y), 'up');
+            
+            // Format dimension text (reuse existing function)
+            function formatDimension(value) {
+                // Format decimal inches (3 places) in brackets
+                const decimalStr = `[${value.toFixed(3)}"]`;
+                
+                // Convert to fraction (in 32nds)
+                const whole = Math.floor(value);
+                const frac = value - whole;
+                const num = Math.round(frac * 32);
+                const den = 32;
+                
+                // Reduce fraction if possible
+                function gcd(a, b) { return b ? gcd(b, a % b) : a; }
+                const div = gcd(num, den);
+                
+                const fractionStr = whole > 0 
+                    ? `${whole} ${num/div}/${den/div}"`
+                    : `${num/div}/${den/div}"`;
+                
+                return `${decimalStr}\n${fractionStr}`;
+            }
+            
+            // Add dimension text
+            const text = new paper.PointText({
+                point: new paper.Point(xPosition, bottomEdge.y + extension + textOffset),
+                content: formatDimension(value),
+                fillColor: '#000',
+                fontFamily: 'Arial',
+                fontSize: 11,
+                justification: 'left'
+            });
+            
+            // Add white background for text
+            const textBackground = new paper.Path.Rectangle({
+                rectangle: text.bounds.expand(4),
+                fillColor: '#fff',
+                strokeWidth: 0
+            });
+            
+            // Add all elements to group in correct order
+            group.addChildren([dimLine, topArrow, bottomArrow, textBackground, text]);
+            targetLayer.addChild(group);
+            
+            return group;
+        }
+
+        // Main drawing function: sets up graphics area and calls beam/annotation drawing
+        function drawBeam() {
+            // Clear all layers
+            paper.project.clear();
+            
+            // Create a graphics area group/layer
+            const graphicsLayer = new paper.Layer();
+            
+            // Draw the beam shape on this layer
+            const { geometry, perimeter, hatchGroup } = drawBeamShape(graphicsLayer);
+            
+            // Add all dimensions
+            // 1. Overall width (top)
+            const widthDim = new DimensionalAnnotation({
+                start: geometry.points.tf1,
+                end: geometry.points.tf2,
+                value: geometry.dimensions.width,
+                orientation: 'horizontal',
+                placementHint: 'above',
+                offset: scaleManager.toPixels(1), // 1" offset
+                style: { 
+                    lineColor: '#000', 
+                    textColor: '#000'
+                }
+            });
+            widthDim.draw(graphicsLayer);
+
+            // 2. Overall height (left side)
+            const heightDim = new DimensionalAnnotation({
+                start: geometry.points.tf1,
+                end: geometry.points.bf4,
+                value: geometry.dimensions.height,
+                orientation: 'vertical',
+                placementHint: 'left',
+                offset: scaleManager.toPixels(1.5), // 1.5" offset
+                style: { 
+                    lineColor: '#000', 
+                    textColor: '#000'
+                }
+            });
+            heightDim.draw(graphicsLayer);
+
+            // 3. Top flange thickness (left side)
+            // Calculate midpoint of the left top flange (between tf4 and m1)
+            const flangeLeftEdgeX = geometry.points.tf1.x;  // Left edge x-coordinate
+            const flangeMidpoint = new paper.Point(
+                (geometry.points.tf4.x + geometry.points.w1.x) / 2,
+                geometry.points.tf4.y
+            );
+            drawVerticalThicknessDimension(graphicsLayer, {
+                topEdge: geometry.points.tf1,
+                bottomEdge: geometry.points.tf4,
+                value: geometry.dimensions.flangeThickness,
+                xPosition: flangeLeftEdgeX + flangeMidpoint.x // Offset from the left edge
+            });
+
+            // 4. Web thickness (center)
+            const webMidY = (geometry.points.w1.y + geometry.points.w3.y) / 2;
+            drawThicknessDimension(graphicsLayer, {
+                leftEdge: geometry.points.w1,
+                rightEdge: geometry.points.w2,
+                value: geometry.dimensions.webThickness,
+                yPosition: webMidY
+            });
+
+            // Center the graphics area
+            const bounds = graphicsLayer.bounds;
+            const viewPadding = 80; // Increased padding to accommodate dimensions
+            const scale = Math.min(
+                (paper.view.viewSize.width - viewPadding) / bounds.width,
+                (paper.view.viewSize.height - viewPadding) / bounds.height
+            );
+            
+            // Update scale manager with the new scale
+            scaleManager.updateScale(scaleManager.getScale() * scale);
+            
+            // Position in center
+            graphicsLayer.position = paper.view.center;
+        }
+
+        // Draw the beam when the window loads
+        window.onload = function() {
+            drawBeam();
+        };
+
+        // Handle window resize
+        window.onresize = function() {
+            paper.view.viewSize = new paper.Size(window.innerWidth, window.innerHeight);
+            paper.project.clear();
+            drawBeam();
+        };
+    </script>
+</body>
+</html> 
